@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NaijaRated — Lagos Business Ranking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  body { margin: 0; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+  // Simple in-browser storage stand-in (since this is not running inside Claude anymore).
+  // Everything is saved in this browser's localStorage instead.
+  window.storage = {
+    async get(key) {
+      const val = localStorage.getItem(key);
+      if (val === null) throw new Error('not found');
+      return { key, value: val, shared: false };
+    },
+    async set(key, value) {
+      localStorage.setItem(key, value);
+      return { key, value, shared: false };
+    },
+    async delete(key) {
+      localStorage.removeItem(key);
+      return { key, deleted: true, shared: false };
+    },
+    async list(prefix) {
+      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      return { keys, prefix, shared: false };
+    },
+  };
+</script>
+
+<script type="text/babel" data-presets="react,es2015">
+const { useState, useEffect, useMemo } = React;
+
+
+const BUSINESSES = [{"category": "Web Developers", "name": "Roye Web", "address": "22 Salawu Street, Surulere, Lagos", "area": "Surulere", "phone": "+2349072661934", "extRating": "4.8", "extReviews": 4, "established": 2015}, {"category": "Web Developers", "name": "DientWeb", "address": "77 Adebola Street, Off Adeniran Ogunsanya Street, Lagos", "area": "Surulere", "phone": "+2348100936922", "extRating": "5.0", "extReviews": 3, "established": 2003}, {"category": "Web Developers", "name": "Upwise Digital", "address": "18 Reverend Burke Crescent, Ago Palace Way, Okota, Isolo, Lagos", "area": "Isolo", "phone": "+2347062583950", "extRating": "5.0", "extReviews": 2, "established": 2014}, {"category": "Web Developers", "name": "Geoinfotech", "address": "1A Akin Osiyemi Street, Allen Avenue, Lagos", "area": "Ikeja", "phone": "+2348163222177", "extRating": null, "extReviews": null, "established": 2017}, {"category": "Web Developers", "name": "Chukky Technologies", "address": "42 Ilaja Road, Bariga, Lagos", "area": "Bariga", "phone": "+2348129740452", "extRating": "5.0", "extReviews": 1, "established": 2019}, {"category": "Web Developers", "name": "Hyfig Digital Services Ltd", "address": "Level 5, Suite 1, Dominion Plaza, Igbo-Efon, Lekki-Epe Expressway", "area": "Lekki", "phone": "+2348061185623", "extRating": "5.0", "extReviews": 1, "established": 2012}, {"category": "Web Developers", "name": "BrainPath Consults", "address": "2 Kingsway Road, Falomo, Ikoyi, Lagos", "area": "Ikoyi", "phone": "+2348112799629", "extRating": "5.0", "extReviews": 1, "established": 2008}, {"category": "Web Developers", "name": "Wow Effect Communications", "address": "Suite 1, 42 Ajose Street, Mende, Maryland, Lagos", "area": "Maryland", "phone": "+2348099679230", "extRating": null, "extReviews": null, "established": 2010}, {"category": "Web Developers", "name": "CreativeWeb Nigeria", "address": "58B Obafemi Awolowo Way, Lagos", "area": "Ikeja", "phone": "+2348037372777", "extRating": "5.0", "extReviews": 1, "established": 2014}, {"category": "Web Developers", "name": "Higence Code Academy", "address": "4B beside Zenith Bank, Pepple Street, Computer Village, Ikeja, Lagos", "area": "Ikeja", "phone": "+2349062334512", "extRating": "5.0", "extReviews": 1, "established": 2018}, {"category": "Web Developers", "name": "M-tech Compuserve", "address": "Bogije Town, Ibeju-Lekki, Lagos", "area": "Ibeju-Lekki", "phone": "+2347069644600", "extRating": "5.0", "extReviews": 1, "established": 2007}, {"category": "Web Developers", "name": "Bin Binary Technologies", "address": "Opposite Oando Filling Station, Badore Road, Ajah, Lagos", "area": "Ajah", "phone": "+2348038071202", "extRating": null, "extReviews": null, "established": 2010}, {"category": "Web Developers", "name": "Donal Digital", "address": "48C Fatai Abogun Street, Akesan, Igando, Lagos", "area": "Igando", "phone": "+2348166349134", "extRating": null, "extReviews": null, "established": 2012}, {"category": "Web Developers", "name": "Codeprof ICT HUB", "address": "Block 15B, Alhaji Masha Road, Surulere, Lagos", "area": "Surulere", "phone": "+2348097350962", "extRating": null, "extReviews": null, "established": 2016}, {"category": "Web Developers", "name": "The Web Consultants", "address": "17 Jibow Street, Yaba, Lagos", "area": "Yaba", "phone": "+2349063065293", "extRating": null, "extReviews": null, "established": 2017}, {"category": "Event Planners", "name": "Lateetoh Events & Gifts", "address": "Block 8, Harmony Estate, Plot 11, 4 Alhaji Rasaq Bello St, Olowora, Lagos", "area": "Not identified", "phone": "+2348180013353", "extRating": "4.9", "extReviews": 36, "established": null}, {"category": "Event Planners", "name": "Indigocrystal Concept", "address": "36 Ikorodu Road, Jibowu, Yaba, Lagos", "area": "Yaba", "phone": "+2347060590242", "extRating": "4.9", "extReviews": 120, "established": null}, {"category": "Event Planners", "name": "Winsome Interior & Events Decor", "address": "Firstview Plaza, #1 Shehu Road, Lakeview Estate Phase 2, Amuwo Odofin, Lagos", "area": "Amuwo Odofin", "phone": "+2348068177002", "extRating": "5.0", "extReviews": 4, "established": 2011}, {"category": "Event Planners", "name": "Dgroovy2unes", "address": "16 Maja Nsor Street, Eliase Estate, Owode Onirin, Lagos", "area": "Not identified", "phone": "+2348067814939", "extRating": "5.0", "extReviews": 1, "established": 2022}, {"category": "Photographers", "name": "Renascent Multimedia", "address": "No 23 Elegbede St, Shasha Egbeda, Lagos", "area": "Egbeda", "phone": "+2348077669339", "extRating": "5.0", "extReviews": 2, "established": 2014}, {"category": "Photographers", "name": "Cameraboss Media", "address": "No 23 Elegbede St, Shasha Egbeda, Lagos", "area": "Egbeda", "phone": "+23480776693339", "extRating": "4.5", "extReviews": 2, "established": 2016}, {"category": "Photographers", "name": "EventsPro Photography", "address": "10 Ogundana St, Ikeja, Lagos", "area": "Ikeja", "phone": "+2349096837408", "extRating": null, "extReviews": null, "established": 2012}, {"category": "Photographers", "name": "Pyragraph Studios", "address": "5 Ogundana Street, Off Allen Avenue, Lagos", "area": "Ikeja", "phone": "+2348024256259", "extRating": null, "extReviews": null, "established": 2016}, {"category": "Photographers", "name": "Afri Artisans Ltd", "address": "242A Alhaji Ganiyu Alimi Crescent, Gbagada Phase II, Lagos", "area": "Gbagada", "phone": "+2349071812348", "extRating": null, "extReviews": null, "established": 2017}, {"category": "Photographers", "name": "Obligato Creative Studios", "address": "Lagos, Nigeria", "area": "Not identified", "phone": "+2347036593697", "extRating": null, "extReviews": null, "established": null}, {"category": "Photographers", "name": "iSHOOT PHOTOGRAPHY", "address": "65 Jubril Martins Street, Lagos", "area": "Not identified", "phone": "+2348047466864", "extRating": null, "extReviews": null, "established": 2015}, {"category": "Photographers", "name": "CameraBoy Multimedia", "address": "8 Ogundipe Street, Santos Estate, Akowonjo, Lagos", "area": "Akowonjo", "phone": "+2348083787577", "extRating": null, "extReviews": null, "established": 2015}, {"category": "Photographers", "name": "KCH Photo Studio", "address": "155 Dopemu Road, Dopemu Bus Stop, Agege, Lagos", "area": "Agege", "phone": "+2348062249993", "extRating": null, "extReviews": null, "established": 2014}, {"category": "Photographers", "name": "Mattson Creation Studio", "address": "Block 50, House 13, Cottage Drive, Off Abike Animashaun Street, Phase 1, Lekki, Lagos", "area": "Lekki", "phone": "+2348054119006", "extRating": null, "extReviews": null, "established": null}, {"category": "Photographers", "name": "Joemax Communications", "address": "109 Palm Avenue, Mushin, Lagos", "area": "Mushin", "phone": "+2348033358659", "extRating": null, "extReviews": null, "established": null}, {"category": "Photographers", "name": "Exposure", "address": "14 Amodu Tijani Close, Off Sanusi Fafunwa, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+23414611251", "extRating": null, "extReviews": null, "established": null}, {"category": "Photographers", "name": "Banik Digital Photo Studios & Mini Lab", "address": "103 Ogunlana Drive, Surulere, Lagos", "area": "Surulere", "phone": "+2348034241434", "extRating": null, "extReviews": null, "established": null}, {"category": "Photographers", "name": "Bigdil Digital Imagine", "address": "26 Adeniran Ogunsanya, Surulere, Lagos", "area": "Surulere", "phone": "+23417388102", "extRating": null, "extReviews": null, "established": null}, {"category": "Fashion Designers", "name": "Needles & Thread", "address": "2nd Avenue, 202 Road, Opposite E-Close, Beside Zuma Complex, Festac Town, Lagos", "area": "Festac Town", "phone": "+2348022236748", "extRating": null, "extReviews": null, "established": null}, {"category": "Fashion Designers", "name": "TailorMod", "address": "14 Unity Road, Off Anthony Mobolaji Way, Ikeja, Lagos", "area": "Ikeja", "phone": "+2349091733544", "extRating": null, "extReviews": null, "established": 2014}, {"category": "Fashion Designers", "name": "Deola Sagoe", "address": "Plot 292F, Ajose Adeogun Street, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2348057700243", "extRating": null, "extReviews": null, "established": 1989}, {"category": "Fashion Designers", "name": "Workbook.ng", "address": "I&J Place, 82 Isawo Road, Opposite Mechanic Village Second Gate, Owutu/Agric, Ikorodu, Lagos", "area": "Owutu", "phone": "+2348059444656", "extRating": null, "extReviews": null, "established": 2017}, {"category": "Fashion Designers", "name": "Dvyn Clothing & Branding", "address": "11 Alaja Browne Street, Olude Bus Stop, Ipaja, Lagos", "area": "Ipaja", "phone": "+2348084986410", "extRating": null, "extReviews": null, "established": 2009}, {"category": "Fashion Designers", "name": "Holas Trendy Couture", "address": "Anthony, Lagos", "area": "Anthony", "phone": "+2348091129429", "extRating": null, "extReviews": null, "established": 2010}, {"category": "Fashion Designers", "name": "Winsems Tent", "address": "5 Olufemi Olatunji Street, Osapa, Lekki, Lagos", "area": "Lekki", "phone": "+2347038131833", "extRating": null, "extReviews": null, "established": 2015}, {"category": "Fashion Designers", "name": "Yetty Fashion Ventures", "address": "Block 21, Flat 1, Jakande Estate, Ipaja, Lagos", "area": "Ipaja", "phone": "+2348035261891", "extRating": null, "extReviews": null, "established": 2015}, {"category": "Fashion Designers", "name": "John 3V3 Hats Limited", "address": "17 Maitama Sule Street, Ikoyi, Lagos", "area": "Ikoyi", "phone": "+23412671339", "extRating": null, "extReviews": null, "established": null}, {"category": "Fashion Designers", "name": "ManuelsCo.", "address": "32A Wole Ariyo Street, Off Admiralty Way, Lekki Phase 1, Lagos", "area": "Lekki Phase 1", "phone": "+2348152676460", "extRating": null, "extReviews": null, "established": 2012}, {"category": "Fashion Designers", "name": "Marshals Iconic Designs Ltd", "address": "Shop 2 Olori-Ebi Shopping Complex, Opposite Oke-Ira-Nla Central Mosque, Badore, Ajah, Lagos", "area": "Ajah", "phone": "+2348135026312", "extRating": null, "extReviews": null, "established": 2016}, {"category": "Fashion Designers", "name": "SILVERLINE FASHIONS", "address": "29 Okusaga Street, Ilupeju, Lagos", "area": "Ilupeju", "phone": "+2348066890997", "extRating": null, "extReviews": null, "established": null}, {"category": "Fashion Designers", "name": "A-One (Sofisticat) Limited", "address": "4 Mobolaji Bank-Anthony Way, Maryland, Ikeja, Lagos", "area": "Ikeja", "phone": "+234127077356", "extRating": null, "extReviews": null, "established": null}, {"category": "Real Estate Agents", "name": "Giselle Homes Limited", "address": "Plot 9, Block 113, Beaulah Land Plaza, 3rd Round About, Lekki-Epe Expressway, Lekki Phase 1, Lagos", "area": "Lekki Phase 1", "phone": "+2348091764222", "extRating": "4.4", "extReviews": 5, "established": 2013}, {"category": "Real Estate Agents", "name": "Oparah Realty", "address": "No 16A, Sule Abuka Close, Off Opebi Road, Opebi-Ikeja, Lagos", "area": "Ikeja", "phone": "+2348050480659", "extRating": "4.9", "extReviews": 9, "established": 2010}, {"category": "Real Estate Agents", "name": "99 Properties Africa", "address": "2nd Floor, Providence House, Admiralty Way, Lekki Phase 1, Lagos", "area": "Lekki Phase 1", "phone": "+2348099994949", "extRating": null, "extReviews": null, "established": 2015}, {"category": "Real Estate Agents", "name": "Azrieli Property Limited", "address": "Plot 13Q, Eden Garden Estate, Ajah, Lekki, Lagos", "area": "Lekki", "phone": "+2348064025398", "extRating": null, "extReviews": null, "established": null}, {"category": "Real Estate Agents", "name": "Knight Frank", "address": "24 Campbell Street, Lagos Island, Lagos", "area": "Lagos Island", "phone": "+2348166341577", "extRating": null, "extReviews": null, "established": 1965}, {"category": "Real Estate Agents", "name": "Ramos Of Lagos Realty", "address": "Suite C17 De Cherub Mall, 18 Lekki-Epe Expressway, Lagos", "area": "Lekki", "phone": "+2348133355522", "extRating": null, "extReviews": null, "established": 2007}, {"category": "Real Estate Agents", "name": "Deep-Delve Concepts", "address": "Km 14, Lekki-Epe Expressway, Igbo-Efon, Lekki, Lagos", "area": "Lekki", "phone": "+2347030880015", "extRating": "4.7", "extReviews": 3, "established": 2010}, {"category": "Real Estate Agents", "name": "Capitalfieldsrealty", "address": "2 Ikare Street, Sanya Express, Surulere, Lagos", "area": "Surulere", "phone": "+2348025004943", "extRating": null, "extReviews": null, "established": 2015}, {"category": "Real Estate Agents", "name": "CBRE Excellerate", "address": "28 Raymond Njoku St, Ikoyi, Lagos", "area": "Ikoyi", "phone": "+23414537110", "extRating": null, "extReviews": null, "established": null}, {"category": "Real Estate Agents", "name": "Darren Davies Properties", "address": "Suite C1/5, Treasure Mall, Km 33 Lekki-Epe Expressway, Ajah, Lagos", "area": "Lekki", "phone": "+2348123547444", "extRating": null, "extReviews": null, "established": null}, {"category": "Real Estate Agents", "name": "Jimmick Limited", "address": "13 Alhaja Elesin Street, Ramat Crescent, Ogudu GRA, Lagos", "area": "Ogudu", "phone": "+2349096263676", "extRating": null, "extReviews": null, "established": 2017}, {"category": "Real Estate Agents", "name": "SunPlanet Real Estate Company", "address": "1 Obadiah Street, Akoka, Yaba, Lagos", "area": "Yaba", "phone": "+2348165342178", "extRating": null, "extReviews": null, "established": 2018}, {"category": "Real Estate Agents", "name": "Zoe Real Estate Properties", "address": "NA, Lagos, Nigeria", "area": "Not identified", "phone": "+2347062889444", "extRating": null, "extReviews": null, "established": 2017}, {"category": "Real Estate Agents", "name": "J. Ajayi Patunola & Co", "address": "86A Allen Avenue, Ikeja, Lagos", "area": "Ikeja", "phone": "+2347028023366", "extRating": null, "extReviews": null, "established": null}, {"category": "Real Estate Agents", "name": "Centurystone Realtors", "address": "339A Ayilara Street, Ojuelegba, Surulere, Lagos", "area": "Surulere", "phone": "+2348023108360", "extRating": null, "extReviews": null, "established": 2000}, {"category": "Medical Specialists / Hospitals", "name": "The Fertility Centre (THE HOSPITAL)", "address": "21 Raji Oladimeji Crescent, CMD Rd, Shangisha, Lagos", "area": "Not identified", "phone": "+2348188343865", "extRating": null, "extReviews": null, "established": 2013}, {"category": "Medical Specialists / Hospitals", "name": "Lagos Executive Cardiovascular Clinic", "address": "10B Chief Albert Iyorah Street, Off Babatunde Anjous Street, Admiralty Way, Lekki Phase 1, Lagos", "area": "Lekki Phase 1", "phone": "+2348173651737", "extRating": "5.0", "extReviews": 1, "established": 2017}, {"category": "Medical Specialists / Hospitals", "name": "Gbagada General Hospital", "address": "1 Hospital Road, Gbagada, Kosofe, Lagos", "area": "Gbagada", "phone": "+23414721866", "extRating": "4.0", "extReviews": 1, "established": 1972}, {"category": "Medical Specialists / Hospitals", "name": "Godfrey Hospital", "address": "Plot 3554 Kofo Kasumu Avenue, Lakeview Phase 1 Estate, Lagos", "area": "Not identified", "phone": "+2348094941593", "extRating": "3.3", "extReviews": 3, "established": 2015}, {"category": "Medical Specialists / Hospitals", "name": "Reddington Hospital", "address": "12 Idowu Martins Street, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+23412715341", "extRating": null, "extReviews": null, "established": 2006}, {"category": "Medical Specialists / Hospitals", "name": "Lakeshore Cancer Center", "address": "14 Amodu Tijani Close, Victoria Island / 5A Oduduwa Crescent, Ikeja GRA, Lagos", "area": "Victoria Island", "phone": "+2348099715000", "extRating": null, "extReviews": null, "established": 2014}, {"category": "Medical Specialists / Hospitals", "name": "Mediplan Healthcare Limited", "address": "Plot 286B, Ajose Adeogun Street, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+23418508348", "extRating": null, "extReviews": null, "established": 2000}, {"category": "Medical Specialists / Hospitals", "name": "Regenix Healthcare Services", "address": "Broad Street, Lagos Island, Lagos", "area": "Lagos Island", "phone": "+2347018204144", "extRating": null, "extReviews": null, "established": 2000}, {"category": "Medical Specialists / Hospitals", "name": "Valley Oak Hospital", "address": "No 2 Kayode Anifowoshe Street, Kosofe/Ojodu Berger, Lagos", "area": "Kosofe", "phone": "+2348149225458", "extRating": null, "extReviews": null, "established": 2010}, {"category": "Medical Specialists / Hospitals", "name": "Havana Specialist Hospital Limited", "address": "115 Akerele Extension, Akerele Road, Surulere, Lagos", "area": "Surulere", "phone": "+2348027272727", "extRating": "3.9", "extReviews": 171, "established": null}, {"category": "Medical Specialists / Hospitals", "name": "King's Hospital Limited", "address": "19 Keffi Street, S/W Ikoyi, Lagos", "area": "Ikoyi", "phone": "+23418916180", "extRating": null, "extReviews": null, "established": null}, {"category": "Medical Specialists / Hospitals", "name": "Providence Hospitals Limited", "address": "77 Itire Road, Surulere, Lagos", "area": "Surulere", "phone": "+23415835973", "extRating": null, "extReviews": null, "established": null}, {"category": "Medical Specialists / Hospitals", "name": "The Heritage Specialist Clinics", "address": "House 1, Greenville Estate Way, Off Ajah-Addoora Dual Carriage, Ajah, Lagos", "area": "Ajah", "phone": "+2348034664160", "extRating": "5.0", "extReviews": 1, "established": null}, {"category": "Medical Specialists / Hospitals", "name": "Abebe Clinic", "address": "87 Awolowo Road, Ikoyi, Lagos", "area": "Ikoyi", "phone": "+23412690080", "extRating": null, "extReviews": null, "established": null}, {"category": "Medical Specialists / Hospitals", "name": "Asaju Medical Clinic", "address": "2 Olosa Street, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+23412616294", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "Favoured Pearls School", "address": "4 Dapo Adeoye Street, Off Deeper Life Church, Soluyi, Gbagada, Lagos", "area": "Gbagada", "phone": "+2348035534097", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "Rainbow Manor Preschool", "address": "Plot 190B, Prince Ade Odedina Street, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+23412702586", "extRating": "4.5", "extReviews": 2, "established": 2016}, {"category": "Schools", "name": "Rehoboth Children's House School", "address": "10-12 Crest Villa Court, Ologolo Road, Agungi, Lekki, Lagos", "area": "Lekki", "phone": "+2349032551693", "extRating": "5.0", "extReviews": 1, "established": 2017}, {"category": "Schools", "name": "Great Platinum Schools", "address": "Road 12, Peace Estate, Baruwa, Ipaja, Lagos", "area": "Ipaja", "phone": "+2348086133065", "extRating": null, "extReviews": null, "established": 2010}, {"category": "Schools", "name": "S-TEE Schools", "address": "H Close, 5th Ave, Festac Town, Lagos", "area": "Festac Town", "phone": "+2347045671842", "extRating": null, "extReviews": null, "established": 1978}, {"category": "Schools", "name": "Loral International Schools", "address": "2nd Avenue, 201 Road, D Close, Festac Town, Lagos", "area": "Festac Town", "phone": "+23415891534", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "Springfields Childrens School", "address": "25 Fadiya Street, Ketu, Lagos", "area": "Not identified", "phone": "+2348057414915", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "Arcadia Montessori School", "address": "5 James Adejumo Close, Lekki Phase 1, Lagos", "area": "Lekki Phase 1", "phone": "+2348092220519", "extRating": null, "extReviews": null, "established": 2016}, {"category": "Schools", "name": "Barbara Cox Schools", "address": "24 Road, Festac Town, Lagos", "area": "Festac Town", "phone": "+2348033122129", "extRating": "5.0", "extReviews": 1, "established": 2008}, {"category": "Schools", "name": "Querencia Schools", "address": "4th Avenue, A Close, Festac Town, Lagos", "area": "Festac Town", "phone": "+2348101692533", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "Cactus International School Ltd", "address": "47/49 Goodluck Ogundeji Ave, Off Abaranje Road, Ikotun, Lagos", "area": "Ikotun", "phone": "+2348033462529", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "Deltos Model School", "address": "Chemist Bus Stop, 4 Funmilayo Onaronke Street, Off Emily Akinola St, Akoka, Lagos", "area": "Akoka", "phone": "+2348062459414", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "The Oakwood Montessori School", "address": "Plot 33 Adedamola Ojomo Close, Off Bode Thomas Street, Surulere, Lagos", "area": "Surulere", "phone": "+2347035755563", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "White-Waters School", "address": "No 24 Gospel Road, Isashi, Ojo, Lagos", "area": "Ojo", "phone": "+2348091111185", "extRating": null, "extReviews": null, "established": null}, {"category": "Schools", "name": "Divine Offspring International School", "address": "15 Olaribiro Street, By Alade B/Stop Off Allen Avenue, Ikeja, Lagos", "area": "Ikeja", "phone": "+2348023996205", "extRating": null, "extReviews": null, "established": null}, {"category": "Car Dealers", "name": "AutoJoshNG", "address": "Masha, Lagos", "area": "Not identified", "phone": "+2348150311111", "extRating": "4.5", "extReviews": 2, "established": null}, {"category": "Car Dealers", "name": "Mandilas Enterprises Limited", "address": "Mandilas Building, 35 Simpson St, Lagos Island, Lagos", "area": "Lagos Island", "phone": "+2349062817619", "extRating": "4.1", "extReviews": 435, "established": null}, {"category": "Car Dealers", "name": "Range Rover Specialist/Dealer", "address": "Sura Shopping Complex, Lagos Island, Lagos", "area": "Lagos Island", "phone": "+2349138700937", "extRating": "5.0", "extReviews": 4, "established": null}, {"category": "Car Dealers", "name": "Bathotech Auto and Machineries", "address": "26 Kosofe Road, Dolphin Estate, Ikoyi, Lagos", "area": "Ikoyi", "phone": "+2348055932394", "extRating": "5.0", "extReviews": 2, "established": null}, {"category": "Car Dealers", "name": "BlackPearl Autos", "address": "128B Association Rd, Dolphin Estate, Lagos", "area": "Ikoyi", "phone": "+2347019615096", "extRating": "4.8", "extReviews": 11, "established": null}, {"category": "Car Dealers", "name": "Youngdrey Auto", "address": "Crescent, Ikoyi, Lagos", "area": "Ikoyi", "phone": "+2349067155009", "extRating": "5.0", "extReviews": 2, "established": null}, {"category": "Car Dealers", "name": "Ocean Breeze Auto Lounge Ltd", "address": "18 Oniru New Market Rd, Lekki Phase 1, Lagos", "area": "Lekki Phase 1", "phone": "+2347030777696", "extRating": "5.0", "extReviews": 4, "established": null}, {"category": "Car Dealers", "name": "Dominion Wheels Limited", "address": "9A Idejo St, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2348028311526", "extRating": "4.2", "extReviews": 18, "established": null}, {"category": "Car Dealers", "name": "Ardo Cars Limited", "address": "31 Ologun Agbaje St, Off Adeola Odeku St, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2348113890407", "extRating": "5.0", "extReviews": 3, "established": null}, {"category": "Car Dealers", "name": "Hyundai Motors Nigeria Limited", "address": "179 Akin Adesola St, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2348055506050", "extRating": "4.3", "extReviews": 10, "established": null}, {"category": "Car Dealers", "name": "Changan Nigeria", "address": "179 Akin Adesola St, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2348141337367", "extRating": "1.7", "extReviews": 6, "established": null}, {"category": "Car Dealers", "name": "Ritechanges Autos", "address": "3/5 Adeyemo Alakija St, Eti-Osa, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2347037212126", "extRating": "4.8", "extReviews": 6, "established": null}, {"category": "Car Dealers", "name": "The Honda Place", "address": "272 Akin Adesola St / Kofo Abayomi St, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2348057759889", "extRating": "4.3", "extReviews": 112, "established": null}, {"category": "Car Dealers", "name": "Suzuki by CFAO Lagos", "address": "13A Akin Adesola St, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2349061211111", "extRating": "4.2", "extReviews": 21, "established": null}, {"category": "Car Dealers", "name": "Mikano International Limited - Victoria Island Office", "address": "65 Adeola Odeku St, Victoria Island, Lagos", "area": "Victoria Island", "phone": "+2348007654321", "extRating": "4.7", "extReviews": 189, "established": null}, {"category": "Motor Parks / Bus Terminals", "name": "Ojota park (Biode motor park)", "address": "Biode Motor Park, Ojota, Lagos", "area": "Ojota", "phone": "+2348034802488", "extRating": "3.9", "extReviews": 217, "established": null}, {"category": "Motor Parks / Bus Terminals", "name": "Oshodi Bus Terminal 2", "address": "Oshodi-Oworonshoki Express Way, Mushin, Lagos", "area": "Mushin", "phone": "+2348129578730", "extRating": "4.1", "extReviews": 138, "established": null}, {"category": "Motor Parks / Bus Terminals", "name": "Oshodi Bus Terminal 3", "address": "Oshodi-Oworonshoki Access, Ilupeju, Lagos", "area": "Oshodi", "phone": "+2349052200367", "extRating": "4.1", "extReviews": 71, "established": null}, {"category": "Motor Parks / Bus Terminals", "name": "Oshodi lagos Abuja/Kogi motor park", "address": "47 Old Abeokuta Road, Dopemu, Lagos", "area": "Dopemu", "phone": "+2348051302728", "extRating": "4.1", "extReviews": 20, "established": null}, {"category": "Motor Parks / Bus Terminals", "name": "Ijora J5 Motor Park", "address": "Ijora Cause Way, Ijora Olopa, Lagos", "area": "Not identified", "phone": "+2347052955314", "extRating": "3.5", "extReviews": 300, "established": null}].map((b, i) => ({ ...b, id: `biz-${i}` }));
+
+const CATEGORIES = [...new Set(BUSINESSES.map(b => b.category))];
+const AREAS = [...new Set(BUSINESSES.map(b => b.area).filter(a => a && a !== 'Not identified'))].sort();
+
+const RUBRIC = [
+  { key: 'quality', label: 'How was the quality of what they delivered?', short: 'Quality of work' },
+  { key: 'reliability', label: 'Did they deliver on time, as promised?', short: 'Reliability' },
+  { key: 'communication', label: 'How was communication throughout?', short: 'Communication' },
+  { key: 'value', label: 'Was it good value for what you paid?', short: 'Value for money' },
+];
+
+function initials(name) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+}
+
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return 'just now';
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}d ago`;
+  return `${Math.floor(d / 30)}mo ago`;
+}
+
+function Stars({ value, onChange, size = 22 }) {
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <span
+          key={n}
+          onClick={() => onChange && onChange(n)}
+          style={{
+            fontSize: size,
+            cursor: onChange ? 'pointer' : 'default',
+            color: n <= value ? '#E8A800' : '#C7D4E3',
+            userSelect: 'none',
+          }}
+        >★</span>
+      ))}
+    </div>
+  );
+}
+
+function ScorePill({ score }) {
+  if (score == null) return <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, color: '#8B98A5' }}>New</span>;
+  return (
+    <span style={{
+      fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, fontSize: 12,
+      background: '#E4F3E9', color: '#1B7A43', padding: '3px 9px', borderRadius: 20,
+    }}>{score.toFixed(1)}</span>
+  );
+}
+
+function Avatar({ name, size = 40 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: size * 0.28, background: '#FFC53D',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: size * 0.36, color: '#101C2C', flex: '0 0 auto',
+    }}>{initials(name)}</div>
+  );
+}
+
+function Chip({ children, active, onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      fontFamily: 'IBM Plex Mono, monospace', fontSize: 11, whiteSpace: 'nowrap',
+      padding: '7px 12px', borderRadius: 20, border: `1px solid ${active ? '#101C2C' : '#C7D4E3'}`,
+      background: active ? '#101C2C' : '#fff', color: active ? '#fff' : '#5C6B7A',
+      cursor: 'pointer',
+    }}>{children}</button>
+  );
+}
+
+function Button({ children, onClick, variant = 'solid', style, disabled }) {
+  const base = {
+    fontFamily: 'Inter, sans-serif', fontWeight: 600, fontSize: 13.5,
+    padding: '13px 16px', borderRadius: 12, border: 'none', cursor: disabled ? 'not-allowed' : 'pointer',
+    width: '100%', textAlign: 'center', opacity: disabled ? 0.5 : 1,
+  };
+  const variants = {
+    solid: { background: '#101C2C', color: '#fff' },
+    yellow: { background: '#FFC53D', color: '#101C2C' },
+    ghost: { background: 'transparent', color: '#101C2C', border: '1.5px solid #101C2C' },
+  };
+  return <button onClick={onClick} disabled={disabled} style={{ ...base, ...variants[variant], ...style }}>{children}</button>;
+}
+
+function Header({ onHome, onMod, pendingCount }) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '16px 20px', borderBottom: '2px solid #101C2C', marginBottom: 4,
+    }}>
+      <div onClick={onHome} style={{ cursor: 'pointer', fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 18 }}>
+        Naija<span style={{ color: '#E8A800' }}>Rated</span>
+      </div>
+      <div onClick={onMod} style={{
+        cursor: 'pointer', fontFamily: 'IBM Plex Mono, monospace', fontSize: 10.5, color: '#5C6B7A',
+        border: '1px solid #C7D4E3', borderRadius: 20, padding: '5px 10px', display: 'flex', alignItems: 'center', gap: 6,
+      }}>
+        Moderator
+        {pendingCount > 0 && (
+          <span style={{ background: '#C1442A', color: '#fff', borderRadius: 10, fontSize: 9, padding: '1px 6px' }}>{pendingCount}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function computeScore(reviews) {
+  const approved = reviews.filter(r => r.status === 'approved');
+  if (approved.length === 0) return null;
+  const perCriterion = {};
+  RUBRIC.forEach(({ key }) => {
+    perCriterion[key] = approved.reduce((s, r) => s + r.ratings[key], 0) / approved.length;
+  });
+  const overall = RUBRIC.reduce((s, { key }) => s + perCriterion[key], 0) / RUBRIC.length;
+  const recommendPct = Math.round((approved.filter(r => r.recommend).length / approved.length) * 100);
+  return { overall, perCriterion, recommendPct, count: approved.length };
+}
+
+function App() {
+  const [view, setView] = useState('home');
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedAreaFilter, setSelectedAreaFilter] = useState(null);
+  const [selectedBiz, setSelectedBiz] = useState(null);
+  const [search, setSearch] = useState('');
+  const [reviews, setReviews] = useState({}); // bizId -> [review]
+  const [loaded, setLoaded] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  // Load reviews from storage
+  useEffect(() => {
+    (async () => {
+      try {
+        const idx = await window.storage.get('review-index', false);
+        const ids = idx ? JSON.parse(idx.value) : [];
+        const byBiz = {};
+        for (const id of ids) {
+          try {
+            const r = await window.storage.get(`review:${id}`, false);
+            if (r) {
+              const rev = JSON.parse(r.value);
+              byBiz[rev.bizId] = byBiz[rev.bizId] || [];
+              byBiz[rev.bizId].push(rev);
+            }
+          } catch (e) {}
+        }
+        setReviews(byBiz);
+      } catch (e) {
+        console.error('load error', e);
+      }
+      setLoaded(true);
+    })();
+  }, []);
+
+  async function saveReview(review) {
+    try {
+      const idx = await window.storage.get('review-index', false).catch(() => null);
+      const ids = idx ? JSON.parse(idx.value) : [];
+      ids.push(review.id);
+      await window.storage.set('review-index', JSON.stringify(ids), false);
+      await window.storage.set(`review:${review.id}`, JSON.stringify(review), false);
+      setReviews(prev => ({
+        ...prev,
+        [review.bizId]: [...(prev[review.bizId] || []), review],
+      }));
+    } catch (e) {
+      console.error('save error', e);
+    }
+  }
+
+  async function updateReviewStatus(review, status) {
+    const updated = { ...review, status };
+    try {
+      await window.storage.set(`review:${review.id}`, JSON.stringify(updated), false);
+      setReviews(prev => ({
+        ...prev,
+        [review.bizId]: prev[review.bizId].map(r => r.id === review.id ? updated : r),
+      }));
+      setToast(status === 'approved' ? 'Review approved — now live' : 'Review rejected');
+      setTimeout(() => setToast(null), 2200);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  const allPending = useMemo(() => {
+    return Object.values(reviews).flat().filter(r => r.status === 'pending');
+  }, [reviews]);
+
+  const filteredHome = useMemo(() => {
+    if (!search.trim()) return [];
+    const q = search.toLowerCase();
+    return BUSINESSES.filter(b => b.name.toLowerCase().includes(q) || b.category.toLowerCase().includes(q)).slice(0, 8);
+  }, [search]);
+
+  const topRated = useMemo(() => {
+    return [...BUSINESSES]
+      .filter(b => b.extRating)
+      .sort((a, b) => parseFloat(b.extRating) - parseFloat(a.extRating))
+      .slice(0, 6);
+  }, []);
+
+  function goCategory(cat) {
+    setSelectedCategory(cat);
+    setSelectedAreaFilter(null);
+    setView('category');
+  }
+  function goBiz(biz) {
+    setSelectedBiz(biz);
+    setView('profile');
+  }
+
+  const categoryBusinesses = useMemo(() => {
+    if (!selectedCategory) return [];
+    let list = BUSINESSES.filter(b => b.category === selectedCategory);
+    if (selectedAreaFilter) list = list.filter(b => b.area === selectedAreaFilter);
+    return list.sort((a, b) => (parseFloat(b.extRating) || 0) - (parseFloat(a.extRating) || 0));
+  }, [selectedCategory, selectedAreaFilter]);
+
+  const bizReviews = selectedBiz ? (reviews[selectedBiz.id] || []) : [];
+  const bizScore = computeScore(bizReviews);
+  const bizApproved = bizReviews.filter(r => r.status === 'approved');
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: 'linear-gradient(#DCE4EE 1px, transparent 1px), linear-gradient(90deg, #DCE4EE 1px, transparent 1px), #EEF1F5',
+      backgroundSize: '28px 28px',
+      fontFamily: 'Inter, sans-serif', color: '#101C2C',
+    }}>
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+
+      <div style={{ maxWidth: 480, margin: '0 auto', background: '#F7F9FB', minHeight: '100vh', boxShadow: '0 0 40px rgba(16,28,44,0.08)' }}>
+        <Header onHome={() => setView('home')} onMod={() => setView('mod')} pendingCount={allPending.length} />
+
+        {toast && (
+          <div style={{
+            margin: '10px 16px', padding: '10px 14px', background: '#101C2C', color: '#fff',
+            borderRadius: 10, fontSize: 12, fontFamily: 'IBM Plex Mono, monospace',
+          }}>{toast}</div>
+        )}
+
+        {view === 'home' && (
+          <div style={{ padding: '12px 0 40px' }}>
+            <div style={{ padding: '0 16px 14px' }}>
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search a business or service…"
+                style={{
+                  width: '100%', padding: '12px 14px', borderRadius: 12, border: '1px solid #C7D4E3',
+                  background: '#EEF1F5', fontSize: 13, fontFamily: 'Inter, sans-serif', outline: 'none',
+                }}
+              />
+            </div>
+
+            {search.trim() ? (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#5C6B7A', padding: '4px 16px 8px' }}>
+                  {filteredHome.length ? `${filteredHome.length} result${filteredHome.length > 1 ? 's' : ''}` : 'No matches'}
+                </div>
+                {filteredHome.length === 0 && (
+                  <div style={{ padding: '20px 16px', fontSize: 12, color: '#8B98A5' }}>
+                    No exact match. Try browsing a category below instead.
+                  </div>
+                )}
+                {filteredHome.map(b => (
+                  <BizRow key={b.id} biz={b} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} />
+                ))}
+              </>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: 6, padding: '0 16px 16px', overflowX: 'auto' }}>
+                  {CATEGORIES.map(c => (
+                    <Chip key={c} onClick={() => goCategory(c)}>{c}</Chip>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#5C6B7A', padding: '4px 16px 8px' }}>
+                  Top rated in Lagos
+                </div>
+                {topRated.map((b, i) => (
+                  <BizRow key={b.id} biz={b} rank={i + 1} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} />
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
+        {view === 'category' && selectedCategory && (
+          <div style={{ padding: '12px 0 40px' }}>
+            <div style={{ padding: '0 16px 12px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span onClick={() => setView('home')} style={{ cursor: 'pointer', fontSize: 14 }}>←</span>
+              <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 15 }}>{selectedCategory}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 6, padding: '0 16px 14px', overflowX: 'auto' }}>
+              <Chip active={!selectedAreaFilter} onClick={() => setSelectedAreaFilter(null)}>All areas</Chip>
+              {AREAS.filter(a => BUSINESSES.some(b => b.category === selectedCategory && b.area === a)).map(a => (
+                <Chip key={a} active={selectedAreaFilter === a} onClick={() => setSelectedAreaFilter(a)}>{a}</Chip>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#5C6B7A', padding: '4px 16px 8px' }}>
+              {categoryBusinesses.length} business{categoryBusinesses.length !== 1 ? 'es' : ''}
+            </div>
+            {categoryBusinesses.length === 0 && (
+              <div style={{ padding: '20px 16px', fontSize: 12, color: '#8B98A5' }}>No businesses match this area yet.</div>
+            )}
+            {categoryBusinesses.map((b, i) => (
+              <BizRow key={b.id} biz={b} rank={i + 1} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} showArea />
+            ))}
+          </div>
+        )}
+
+        {view === 'profile' && selectedBiz && (
+          <ProfileView
+            biz={selectedBiz}
+            score={bizScore}
+            approvedReviews={bizApproved}
+            onBack={() => setView(selectedCategory ? 'category' : 'home')}
+            onRate={() => setView('rate')}
+          />
+        )}
+
+        {view === 'rate' && selectedBiz && (
+          <RateView
+            biz={selectedBiz}
+            onCancel={() => setView('profile')}
+            onSubmit={async (data) => {
+              const review = {
+                id: `rev-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                bizId: selectedBiz.id,
+                bizName: selectedBiz.name,
+                reviewerName: data.reviewerName || 'Anonymous',
+                ratings: data.ratings,
+                recommend: data.recommend,
+                text: data.text,
+                submittedAt: Date.now(),
+                status: 'pending',
+                flags: data.flags,
+              };
+              await saveReview(review);
+              setView('profile');
+              setToast('Thanks — your review is being checked before it goes live.');
+              setTimeout(() => setToast(null), 3000);
+            }}
+          />
+        )}
+
+        {view === 'mod' && (
+          <ModView
+            pending={allPending}
+            onDecide={updateReviewStatus}
+            onBack={() => setView('home')}
+          />
+        )}
+
+        {!loaded && <div style={{ padding: 20, fontSize: 12, color: '#8B98A5' }}>Loading…</div>}
+      </div>
+    </div>
+  );
+}
+
+function BizRow({ biz, rank, onClick, score, showArea }) {
+  return (
+    <div onClick={onClick} style={{
+      margin: '0 16px 10px', background: '#fff', border: '1px solid #C7D4E3', borderRadius: 14,
+      padding: 12, display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer',
+    }}>
+      {rank && <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 13, fontWeight: 600, color: '#8B98A5', width: 16 }}>{rank}</div>}
+      <Avatar name={biz.name} size={38} />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.25 }}>{biz.name}</div>
+        <div style={{ fontSize: 10.5, color: '#8B98A5', marginTop: 2 }}>
+          {biz.category}{showArea ? '' : biz.area && biz.area !== 'Not identified' ? ` · ${biz.area}` : ''}
+        </div>
+      </div>
+      <ScorePill score={score ? score.overall : (biz.extRating ? parseFloat(biz.extRating) : null)} />
+    </div>
+  );
+}
+
+function ProfileView({ biz, score, approvedReviews, onBack, onRate }) {
+  return (
+    <div style={{ padding: '12px 0 40px' }}>
+      <div style={{ padding: '0 16px 12px' }}>
+        <span onClick={onBack} style={{ cursor: 'pointer', fontSize: 14 }}>← Back</span>
+      </div>
+      <div style={{ textAlign: 'center', padding: '0 16px 14px' }}>
+        <div style={{ margin: '0 auto 10px' }}><Avatar name={biz.name} size={56} /></div>
+        <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 16 }}>{biz.name}</div>
+        <div style={{ fontSize: 11, color: '#8B98A5', marginTop: 2 }}>
+          {biz.category}{biz.area && biz.area !== 'Not identified' ? ` · ${biz.area}` : ''}
+        </div>
+        <div style={{
+          display: 'inline-flex', marginTop: 8, fontFamily: 'IBM Plex Mono, monospace', fontSize: 9.5,
+          background: score ? '#E4F3E9' : '#EEF1F5', color: score ? '#1B7A43' : '#5C6B7A',
+          padding: '4px 9px', borderRadius: 20,
+        }}>{score ? '✓ Rated on NaijaRated' : 'Listed, not yet rated'}</div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, padding: '10px 16px 14px' }}>
+        <a href={`tel:${biz.phone || ''}`} style={{ flex: 1, textDecoration: 'none' }}>
+          <Button variant="solid" style={{ fontSize: 12, padding: 10 }}>📞 Call</Button>
+        </a>
+        <a
+          href={`https://www.google.com/maps/search/${encodeURIComponent(biz.address || biz.name + ' Lagos')}`}
+          target="_blank" rel="noreferrer" style={{ flex: 1, textDecoration: 'none' }}
+        >
+          <Button variant="ghost" style={{ fontSize: 12, padding: 10 }}>📍 Directions</Button>
+        </a>
+      </div>
+
+      {score ? (
+        <>
+          <div style={{ textAlign: 'center', padding: '10px 16px 14px', borderBottom: '1px dashed #C7D4E3', marginBottom: 12 }}>
+            <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: 800, fontSize: 34 }}>{score.overall.toFixed(1)}</span>
+            <span style={{ fontSize: 14, color: '#8B98A5' }}>/5</span>
+            <div style={{ fontSize: 10.5, color: '#5C6B7A', marginTop: 4 }}>
+              {score.recommendPct}% would recommend · {score.count} review{score.count !== 1 ? 's' : ''}
+            </div>
+          </div>
+          {RUBRIC.map(({ key, short }) => (
+            <div key={key} style={{ padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11.5, marginBottom: 9 }}>
+              <span style={{ color: '#5C6B7A' }}>{short}</span>
+              <div style={{ flex: 1, height: 5, background: '#EEF1F5', borderRadius: 6, margin: '0 8px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', background: '#E8A800', borderRadius: 6, width: `${(score.perCriterion[key] / 5) * 100}%` }} />
+              </div>
+              <span style={{ fontFamily: 'IBM Plex Mono, monospace', fontWeight: 600, width: 26, textAlign: 'right' }}>{score.perCriterion[key].toFixed(1)}</span>
+            </div>
+          ))}
+          <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#5C6B7A', padding: '16px 16px 8px' }}>
+            What people said
+          </div>
+          {approvedReviews.slice().reverse().map(r => (
+            <div key={r.id} style={{ margin: '0 16px 10px', background: '#fff', border: '1px solid #C7D4E3', borderRadius: 14, padding: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <Avatar name={r.reviewerName} size={34} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 12, fontWeight: 600 }}>{r.reviewerName} <span style={{ fontWeight: 400, color: '#8B98A5', fontSize: 10 }}>· {timeAgo(r.submittedAt)}</span></div>
+                <div style={{ fontSize: 11, marginTop: 4, lineHeight: 1.4 }}>"{r.text}"</div>
+              </div>
+              <ScorePill score={(r.ratings.quality + r.ratings.reliability + r.ratings.communication + r.ratings.value) / 4} />
+            </div>
+          ))}
+        </>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '20px 24px' }}>
+          <div style={{ fontSize: 30, marginBottom: 8 }}>✦</div>
+          <div style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 14, marginBottom: 6 }}>No ratings yet</div>
+          <div style={{ fontSize: 11.5, color: '#5C6B7A', lineHeight: 1.5 }}>
+            Used this business? Be the first to rate them and help someone else decide.
+          </div>
+        </div>
+      )}
+
+      <div style={{ padding: '16px 16px 0' }}>
+        <Button variant="yellow" onClick={onRate}>{score ? 'Rate this business' : 'Be the first to rate'}</Button>
+      </div>
+    </div>
+  );
+}
+
+function RateView({ biz, onCancel, onSubmit }) {
+  const [step, setStep] = useState(1);
+  const [ratings, setRatings] = useState({ quality: 0, reliability: 0, communication: 0, value: 0 });
+  const [recommend, setRecommend] = useState(null);
+  const [text, setText] = useState('');
+  const [reviewerName, setReviewerName] = useState('');
+
+  const step1Ready = ratings.quality > 0 && ratings.reliability > 0 && ratings.communication > 0;
+  const step2Ready = ratings.value > 0 && recommend !== null && text.trim().length >= 5;
+
+  function submit() {
+    const flags = [];
+    if (text.trim().length < 15) flags.push('short review');
+    onSubmit({ ratings, recommend, text: text.trim(), reviewerName: reviewerName.trim(), flags });
+  }
+
+  return (
+    <div style={{ padding: '12px 0 40px' }}>
+      <div style={{ padding: '0 16px 12px' }}>
+        <span onClick={onCancel} style={{ cursor: 'pointer', fontSize: 14 }}>← Rate {biz.name}</span>
+      </div>
+      <div style={{ padding: '0 16px 16px', display: 'flex', gap: 4 }}>
+        {[1, 2].map(s => (
+          <div key={s} style={{ flex: 1, height: 3, borderRadius: 3, background: s <= step ? '#101C2C' : '#C7D4E3' }} />
+        ))}
+      </div>
+
+      {step === 1 && (
+        <>
+          {RUBRIC.slice(0, 3).map(({ key, label }) => (
+            <div key={key} style={{ padding: '0 18px', marginBottom: 20 }}>
+              <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 10, lineHeight: 1.3 }}>{label}</div>
+              <Stars value={ratings[key]} onChange={v => setRatings(r => ({ ...r, [key]: v }))} />
+            </div>
+          ))}
+          <div style={{ padding: '8px 16px 0' }}>
+            <Button disabled={!step1Ready} onClick={() => setStep(2)}>Continue</Button>
+          </div>
+        </>
+      )}
+
+      {step === 2 && (
+        <>
+          <div style={{ padding: '0 18px', marginBottom: 20 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 10 }}>Was it good value for what you paid?</div>
+            <Stars value={ratings.value} onChange={v => setRatings(r => ({ ...r, value: v }))} />
+          </div>
+          <div style={{ padding: '0 18px', marginBottom: 20 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 10 }}>Would you recommend them to a friend?</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <div onClick={() => setRecommend(true)} style={{
+                flex: 1, textAlign: 'center', padding: 10, borderRadius: 10, cursor: 'pointer',
+                border: `1.5px solid ${recommend === true ? '#1B7A43' : '#C7D4E3'}`,
+                color: recommend === true ? '#1B7A43' : '#5C6B7A',
+                background: recommend === true ? '#E4F3E9' : 'transparent', fontSize: 12, fontWeight: 600,
+              }}>Yes</div>
+              <div onClick={() => setRecommend(false)} style={{
+                flex: 1, textAlign: 'center', padding: 10, borderRadius: 10, cursor: 'pointer',
+                border: `1.5px solid ${recommend === false ? '#C1442A' : '#C7D4E3'}`,
+                color: recommend === false ? '#C1442A' : '#5C6B7A',
+                background: recommend === false ? '#FBEAE6' : 'transparent', fontSize: 12, fontWeight: 600,
+              }}>No</div>
+            </div>
+          </div>
+          <div style={{ padding: '0 18px', marginBottom: 14 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 8 }}>Tell us what happened</div>
+            <textarea
+              value={text} onChange={e => setText(e.target.value)}
+              placeholder="What did they do well, or what went wrong?"
+              style={{
+                width: '100%', height: 80, border: '1.5px solid #C7D4E3', borderRadius: 10, padding: 10,
+                fontSize: 12, fontFamily: 'Inter, sans-serif', resize: 'none', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div style={{ padding: '0 18px', marginBottom: 20 }}>
+            <div style={{ fontSize: 13.5, fontWeight: 600, marginBottom: 8 }}>Your name (shown with your review)</div>
+            <input
+              value={reviewerName} onChange={e => setReviewerName(e.target.value)}
+              placeholder="e.g. Tolu A."
+              style={{
+                width: '100%', border: '1.5px solid #C7D4E3', borderRadius: 10, padding: 10,
+                fontSize: 12, fontFamily: 'Inter, sans-serif', outline: 'none', boxSizing: 'border-box',
+              }}
+            />
+          </div>
+          <div style={{ padding: '0 16px' }}>
+            <Button disabled={!step2Ready} onClick={submit}>Submit review</Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ModView({ pending, onDecide, onBack }) {
+  return (
+    <div style={{ padding: '12px 0 40px' }}>
+      <div style={{ padding: '0 16px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span onClick={onBack} style={{ cursor: 'pointer', fontSize: 14 }}>←</span>
+        <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 15 }}>Review queue</span>
+      </div>
+      <div style={{ padding: '0 16px 14px' }}>
+        <div style={{
+          border: '1px solid #FFC53D', background: '#FFF8E8', borderRadius: 12, padding: '10px 14px',
+          fontSize: 11.5, color: '#5C6B7A',
+        }}>
+          {pending.length} review{pending.length !== 1 ? 's' : ''} awaiting approval. Nothing goes live until you approve it here.
+        </div>
+      </div>
+      {pending.length === 0 && (
+        <div style={{ padding: '30px 16px', textAlign: 'center', fontSize: 12, color: '#8B98A5' }}>
+          Queue is clear. New submissions will show up here.
+        </div>
+      )}
+      {pending.slice().reverse().map(r => (
+        <div key={r.id} style={{ margin: '0 16px 12px', background: '#fff', border: '1px solid #C7D4E3', borderRadius: 14, padding: 14 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            {r.flags && r.flags.length > 0 ? r.flags.map((f, i) => (
+              <span key={i} style={{
+                fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, background: '#FBEAE6', color: '#C1442A',
+                padding: '3px 7px', borderRadius: 6,
+              }}>⚠ {f}</span>
+            )) : (
+              <span style={{
+                fontFamily: 'IBM Plex Mono, monospace', fontSize: 9, background: '#E4F3E9', color: '#1B7A43',
+                padding: '3px 7px', borderRadius: 6,
+              }}>✓ no flags</span>
+            )}
+          </div>
+          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 3 }}>
+            {r.bizName} <span style={{ fontWeight: 400, color: '#8B98A5' }}>· by {r.reviewerName} · {timeAgo(r.submittedAt)}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, fontSize: 10.5, color: '#5C6B7A', marginBottom: 6 }}>
+            <span>Quality {r.ratings.quality}★</span>
+            <span>Reliability {r.ratings.reliability}★</span>
+            <span>Comms {r.ratings.communication}★</span>
+            <span>Value {r.ratings.value}★</span>
+            <span>{r.recommend ? '👍 recommends' : '👎 would not'}</span>
+          </div>
+          <div style={{ fontSize: 11.5, marginBottom: 12, lineHeight: 1.4 }}>"{r.text}"</div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div onClick={() => onDecide(r, 'approved')} style={{
+              flex: 1, textAlign: 'center', padding: '8px', borderRadius: 8, cursor: 'pointer',
+              background: '#101C2C', color: '#fff', fontSize: 11.5, fontWeight: 600,
+            }}>✓ Approve</div>
+            <div onClick={() => onDecide(r, 'rejected')} style={{
+              flex: 1, textAlign: 'center', padding: '8px', borderRadius: 8, cursor: 'pointer',
+              border: '1.5px solid #C1442A', color: '#C1442A', fontSize: 11.5, fontWeight: 600,
+            }}>✕ Reject</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
