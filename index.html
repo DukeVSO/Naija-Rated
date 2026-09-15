@@ -12,6 +12,40 @@
 <style>
   body { margin: 0; }
   * { box-sizing: border-box; }
+
+  .app-shell {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #F7F9FB;
+    min-height: 100vh;
+    box-shadow: 0 0 40px rgba(16,28,44,0.08);
+  }
+
+  @media (min-width: 900px) {
+    .app-shell {
+      max-width: 1200px;
+    }
+    .search-wrap {
+      max-width: 480px;
+    }
+    .chip-row {
+      flex-wrap: wrap !important;
+      overflow-x: visible !important;
+    }
+    .biz-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      padding: 0 24px 8px;
+    }
+    .biz-grid > div {
+      margin: 0 !important;
+    }
+    .profile-wrap {
+      max-width: 640px;
+      margin: 0 auto;
+    }
+  }
 </style>
 </head>
 <body>
@@ -285,7 +319,7 @@ function App() {
       <link rel="preconnect" href="https://fonts.googleapis.com" />
       <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
 
-      <div style={{ maxWidth: 480, margin: '0 auto', background: '#F7F9FB', minHeight: '100vh', boxShadow: '0 0 40px rgba(16,28,44,0.08)' }}>
+      <div className="app-shell" style={{ minHeight: '100vh' }}>
         <Header onHome={() => setView('home')} onMod={() => setView('mod')} pendingCount={allPending.length} />
 
         {toast && (
@@ -297,7 +331,7 @@ function App() {
 
         {view === 'home' && (
           <div style={{ padding: '12px 0 40px' }}>
-            <div style={{ padding: '0 16px 14px' }}>
+            <div className="search-wrap" style={{ padding: '0 16px 14px' }}>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -319,13 +353,15 @@ function App() {
                     No exact match. Try browsing a category below instead.
                   </div>
                 )}
-                {filteredHome.map(b => (
-                  <BizRow key={b.id} biz={b} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} />
-                ))}
+                <div className="biz-grid">
+                  {filteredHome.map(b => (
+                    <BizRow key={b.id} biz={b} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} />
+                  ))}
+                </div>
               </>
             ) : (
               <>
-                <div style={{ display: 'flex', gap: 6, padding: '0 16px 16px', overflowX: 'auto' }}>
+                <div className="chip-row" style={{ display: 'flex', gap: 6, padding: '0 16px 16px', overflowX: 'auto' }}>
                   {CATEGORIES.map(c => (
                     <Chip key={c} onClick={() => goCategory(c)}>{c}</Chip>
                   ))}
@@ -333,9 +369,11 @@ function App() {
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#5C6B7A', padding: '4px 16px 8px' }}>
                   Top rated in Lagos
                 </div>
-                {topRated.map((b, i) => (
-                  <BizRow key={b.id} biz={b} rank={i + 1} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} />
-                ))}
+                <div className="biz-grid">
+                  {topRated.map((b, i) => (
+                    <BizRow key={b.id} biz={b} rank={i + 1} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} />
+                  ))}
+                </div>
               </>
             )}
           </div>
@@ -347,7 +385,7 @@ function App() {
               <span onClick={() => setView('home')} style={{ cursor: 'pointer', fontSize: 14 }}>←</span>
               <span style={{ fontFamily: 'Sora, sans-serif', fontWeight: 700, fontSize: 15 }}>{selectedCategory}</span>
             </div>
-            <div style={{ display: 'flex', gap: 6, padding: '0 16px 14px', overflowX: 'auto' }}>
+            <div className="chip-row" style={{ display: 'flex', gap: 6, padding: '0 16px 14px', overflowX: 'auto' }}>
               <Chip active={!selectedAreaFilter} onClick={() => setSelectedAreaFilter(null)}>All areas</Chip>
               {AREAS.filter(a => BUSINESSES.some(b => b.category === selectedCategory && b.area === a)).map(a => (
                 <Chip key={a} active={selectedAreaFilter === a} onClick={() => setSelectedAreaFilter(a)}>{a}</Chip>
@@ -359,9 +397,11 @@ function App() {
             {categoryBusinesses.length === 0 && (
               <div style={{ padding: '20px 16px', fontSize: 12, color: '#8B98A5' }}>No businesses match this area yet.</div>
             )}
-            {categoryBusinesses.map((b, i) => (
-              <BizRow key={b.id} biz={b} rank={i + 1} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} showArea />
-            ))}
+            <div className="biz-grid">
+              {categoryBusinesses.map((b, i) => (
+                <BizRow key={b.id} biz={b} rank={i + 1} onClick={() => goBiz(b)} score={computeScore(reviews[b.id] || [])} showArea />
+              ))}
+            </div>
           </div>
         )}
 
@@ -435,7 +475,7 @@ function BizRow({ biz, rank, onClick, score, showArea }) {
 
 function ProfileView({ biz, score, approvedReviews, onBack, onRate }) {
   return (
-    <div style={{ padding: '12px 0 40px' }}>
+    <div className="profile-wrap" style={{ padding: '12px 0 40px' }}>
       <div style={{ padding: '0 16px 12px' }}>
         <span onClick={onBack} style={{ cursor: 'pointer', fontSize: 14 }}>← Back</span>
       </div>
@@ -530,7 +570,7 @@ function RateView({ biz, onCancel, onSubmit }) {
   }
 
   return (
-    <div style={{ padding: '12px 0 40px' }}>
+    <div className="profile-wrap" style={{ padding: '12px 0 40px' }}>
       <div style={{ padding: '0 16px 12px' }}>
         <span onClick={onCancel} style={{ cursor: 'pointer', fontSize: 14 }}>← Rate {biz.name}</span>
       </div>
